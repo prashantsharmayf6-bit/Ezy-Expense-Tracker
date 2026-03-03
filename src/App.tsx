@@ -19,8 +19,7 @@ import {
   BookOpen,
   PieChart as PieChartIcon,
   Activity,
-  User,
-  LogOut
+  User
 } from "lucide-react";
 import { 
   BarChart, 
@@ -46,58 +45,26 @@ import { DEFAULT_CATEGORIES } from "./constants";
 import { Card, Button, Input, Select } from "./components/UI";
 import { formatCurrency, formatDate, cn } from "./utils/utils";
 import { exportToExcel, exportToPDF } from "./utils/export";
-import { Login } from "./components/Login";
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
-
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
 
   useEffect(() => {
-    const lastUser = localStorage.getItem("ezy_last_user");
-    // We don't auto-login for security, but we could if we wanted "remember me"
-    // For now, we just wait for the Login component
+    const savedTransactions = localStorage.getItem("ezy_transactions");
+    const savedCategories = localStorage.getItem("ezy_categories");
+    
+    if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+    if (savedCategories) setCategories(JSON.parse(savedCategories));
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      const savedTransactions = localStorage.getItem(`ezy_transactions_${currentUser}`);
-      const savedCategories = localStorage.getItem(`ezy_categories_${currentUser}`);
-      
-      if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-      else setTransactions([]);
-
-      if (savedCategories) setCategories(JSON.parse(savedCategories));
-      else setCategories(DEFAULT_CATEGORIES);
-    }
-  }, [isAuthenticated, currentUser]);
+    localStorage.setItem("ezy_transactions", JSON.stringify(transactions));
+  }, [transactions]);
 
   useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      localStorage.setItem(`ezy_transactions_${currentUser}`, JSON.stringify(transactions));
-    }
-  }, [transactions, isAuthenticated, currentUser]);
-
-  useEffect(() => {
-    if (isAuthenticated && currentUser) {
-      localStorage.setItem(`ezy_categories_${currentUser}`, JSON.stringify(categories));
-    }
-  }, [categories, isAuthenticated, currentUser]);
-
-  const handleLogin = (username: string) => {
-    setCurrentUser(username);
-    setIsAuthenticated(true);
-    localStorage.setItem("ezy_last_user", username);
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    setTransactions([]);
-    setCategories(DEFAULT_CATEGORIES);
-  };
+    localStorage.setItem("ezy_categories", JSON.stringify(categories));
+  }, [categories]);
 
   const [activeTab, setActiveTab] = useState<"dashboard" | "journal" | "categories" | "ledger">("dashboard");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -298,12 +265,8 @@ export default function App() {
   }).reverse();
 
   return (
-    <AnimatePresence mode="wait">
-      {!isAuthenticated ? (
-        <Login key="login" onLogin={handleLogin} />
-      ) : (
-        <div key="app" className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc] pb-20 md:pb-0">
-          {/* Desktop Sidebar */}
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc] pb-20 md:pb-0">
+      {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 bg-white border-r border-slate-200 p-6 flex-col gap-8 sticky top-0 h-screen">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
@@ -364,19 +327,11 @@ export default function App() {
             <PlusCircle size={20} />
             Add Entry
           </Button>
-
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left w-full text-red-500 hover:bg-red-50 mt-4"
-          >
-            <LogOut size={20} />
-            <span className="font-semibold">Logout</span>
-          </button>
         </div>
       </aside>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-slate-200 px-6 py-3 flex justify-between items-center z-40">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 px-4 py-3 flex justify-between items-center z-50 pb-safe">
         <button 
           onClick={() => setActiveTab("dashboard")}
           className={cn(
@@ -384,8 +339,8 @@ export default function App() {
             activeTab === "dashboard" ? "text-blue-600" : "text-slate-400"
           )}
         >
-          <LayoutDashboard size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
+          <LayoutDashboard size={22} />
+          <span className="text-[9px] font-bold uppercase tracking-wider">Home</span>
         </button>
         <button 
           onClick={() => setActiveTab("journal")}
@@ -394,10 +349,9 @@ export default function App() {
             activeTab === "journal" ? "text-blue-600" : "text-slate-400"
           )}
         >
-          <ReceiptText size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Journal</span>
+          <ReceiptText size={22} />
+          <span className="text-[9px] font-bold uppercase tracking-wider">Journal</span>
         </button>
-        
         <button 
           onClick={() => setActiveTab("ledger")}
           className={cn(
@@ -405,15 +359,15 @@ export default function App() {
             activeTab === "ledger" ? "text-blue-600" : "text-slate-400"
           )}
         >
-          <BookOpen size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Ledger</span>
+          <BookOpen size={22} />
+          <span className="text-[9px] font-bold uppercase tracking-wider">Ledger</span>
         </button>
-
+        
         <button 
           onClick={() => setIsAddModalOpen(true)}
-          className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center text-white -mt-12 shadow-xl shadow-blue-500/30 border-4 border-white"
+          className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full flex items-center justify-center text-white -mt-10 shadow-xl shadow-blue-500/30 border-4 border-white active:scale-95 transition-transform"
         >
-          <PlusCircle size={28} />
+          <PlusCircle size={24} />
         </button>
 
         <button 
@@ -423,23 +377,18 @@ export default function App() {
             activeTab === "categories" ? "text-blue-600" : "text-slate-400"
           )}
         >
-          <Settings size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Setup</span>
+          <Settings size={22} />
+          <span className="text-[9px] font-bold uppercase tracking-wider">Setup</span>
         </button>
         <button 
-          onClick={() => exportToPDF(transactions, categories)}
-          className="flex flex-col items-center gap-1 text-slate-400"
+          onClick={() => {
+            console.log("Exporting to PDF...");
+            exportToPDF(transactions, categories);
+          }}
+          className="flex flex-col items-center gap-1 text-slate-400 active:text-blue-600"
         >
-          <Download size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Export</span>
-        </button>
-
-        <button 
-          onClick={handleLogout}
-          className="flex flex-col items-center gap-1 text-red-500"
-        >
-          <LogOut size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Logout</span>
+          <Download size={22} />
+          <span className="text-[9px] font-bold uppercase tracking-wider">Export</span>
         </button>
       </nav>
 
@@ -453,7 +402,7 @@ export default function App() {
               </div>
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
-                  {activeTab === "dashboard" ? `Hello, ${currentUser}!` : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                  {activeTab === "dashboard" ? "Hello!" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                 </h2>
                 <p className="text-sm md:text-base text-slate-500 font-semibold">
                   {activeTab === "dashboard" 
@@ -1392,7 +1341,5 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
-  )}
-</AnimatePresence>
   );
 }
