@@ -1,0 +1,5 @@
+{
+  "name": "EZY Expense Tracker",
+  "description": "A modern, advanced, and user-friendly expense tracker with dashboards, journal entries, and export capabilities (Excel/PDF).",
+  "requestFramePermissions": []
+}
