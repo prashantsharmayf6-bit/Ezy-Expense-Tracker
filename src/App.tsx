@@ -19,7 +19,8 @@ import {
   BookOpen,
   PieChart as PieChartIcon,
   Activity,
-  User
+  User,
+  LogOut
 } from "lucide-react";
 import { 
   BarChart, 
@@ -45,17 +46,58 @@ import { DEFAULT_CATEGORIES } from "./constants";
 import { Card, Button, Input, Select } from "./components/UI";
 import { formatCurrency, formatDate, cn } from "./utils/utils";
 import { exportToExcel, exportToPDF } from "./utils/export";
+import { Login } from "./components/Login";
 
 export default function App() {
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem("ezy_transactions");
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = localStorage.getItem("ezy_categories");
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+
+  useEffect(() => {
+    const lastUser = localStorage.getItem("ezy_last_user");
+    // We don't auto-login for security, but we could if we wanted "remember me"
+    // For now, we just wait for the Login component
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      const savedTransactions = localStorage.getItem(`ezy_transactions_${currentUser}`);
+      const savedCategories = localStorage.getItem(`ezy_categories_${currentUser}`);
+      
+      if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+      else setTransactions([]);
+
+      if (savedCategories) setCategories(JSON.parse(savedCategories));
+      else setCategories(DEFAULT_CATEGORIES);
+    }
+  }, [isAuthenticated, currentUser]);
+
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      localStorage.setItem(`ezy_transactions_${currentUser}`, JSON.stringify(transactions));
+    }
+  }, [transactions, isAuthenticated, currentUser]);
+
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      localStorage.setItem(`ezy_categories_${currentUser}`, JSON.stringify(categories));
+    }
+  }, [categories, isAuthenticated, currentUser]);
+
+  const handleLogin = (username: string) => {
+    setCurrentUser(username);
+    setIsAuthenticated(true);
+    localStorage.setItem("ezy_last_user", username);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setTransactions([]);
+    setCategories(DEFAULT_CATEGORIES);
+  };
 
   const [activeTab, setActiveTab] = useState<"dashboard" | "journal" | "categories" | "ledger">("dashboard");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -109,14 +151,6 @@ export default function App() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, startDate, endDate]);
-
-  useEffect(() => {
-    localStorage.setItem("ezy_transactions", JSON.stringify(transactions));
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem("ezy_categories", JSON.stringify(categories));
-  }, [categories]);
 
   const handleAddTransaction = (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,8 +298,12 @@ export default function App() {
   }).reverse();
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc] pb-20 md:pb-0">
-      {/* Desktop Sidebar */}
+    <AnimatePresence mode="wait">
+      {!isAuthenticated ? (
+        <Login key="login" onLogin={handleLogin} />
+      ) : (
+        <div key="app" className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc] pb-20 md:pb-0">
+          {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 bg-white border-r border-slate-200 p-6 flex-col gap-8 sticky top-0 h-screen">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
@@ -326,6 +364,14 @@ export default function App() {
             <PlusCircle size={20} />
             Add Entry
           </Button>
+
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left w-full text-red-500 hover:bg-red-50 mt-4"
+          >
+            <LogOut size={20} />
+            <span className="font-semibold">Logout</span>
+          </button>
         </div>
       </aside>
 
@@ -387,6 +433,14 @@ export default function App() {
           <Download size={24} />
           <span className="text-[10px] font-bold uppercase tracking-wider">Export</span>
         </button>
+
+        <button 
+          onClick={handleLogout}
+          className="flex flex-col items-center gap-1 text-red-500"
+        >
+          <LogOut size={24} />
+          <span className="text-[10px] font-bold uppercase tracking-wider">Logout</span>
+        </button>
       </nav>
 
       {/* Main Content */}
@@ -399,7 +453,7 @@ export default function App() {
               </div>
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
-                  {activeTab === "dashboard" ? "Hello, Prashant!" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                  {activeTab === "dashboard" ? `Hello, ${currentUser}!` : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                 </h2>
                 <p className="text-sm md:text-base text-slate-500 font-semibold">
                   {activeTab === "dashboard" 
@@ -1338,5 +1392,7 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+  )}
+</AnimatePresence>
   );
 }

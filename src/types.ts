@@ -1,6 +1,13 @@
 export type TransactionType = "income" | "expense";
 export type PaymentType = "Cash" | "Card" | "UPI" | "Bank Transfer";
 
+export interface User {
+  username: string;
+  passwordHash: string;
+  isBiometricEnabled: boolean;
+  biometricId?: string;
+}
+
 export interface Category {
   id: string;
   name: string;
